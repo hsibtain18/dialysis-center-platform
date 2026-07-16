@@ -1,0 +1,12 @@
+# Python virtual environments & dependencies
+**/venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+
+# Node.js dependencies & builds
+**/node_modules/
+**/.next/
+**/dist/
+.DS_Store
