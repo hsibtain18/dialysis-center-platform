@@ -2,42 +2,42 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
 
-# Only read .env files locally. Let the cloud handle raw environment arrays directly!
-if not os.getenv("RAILWAY_ENVIRONMENT_NAME"):
-    print("[CONSOLE-DB] Local environment detected. Loading .env file...")
-    load_dotenv()
-else:
-    print("[CONSOLE-DB] Cloud environment detected. Skipping local .env files.")
+# ✅ GRAB DATABASE_URL ONCE AT MODULE LOAD TIME
+# Railway automatically injects this; don't check for it conditionally at runtime
+DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Validate it exists - fail fast if not configured
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is not set. "
+        "Ensure it's configured in Railway dashboard under Variables."
+    )
+
+print(f"[CONSOLE-DB] DATABASE_URL loaded successfully (first 50 chars): {DATABASE_URL[:50]}...")
+
+# Safe modification because SQLAlchemy 2.0 requires "postgresql://" instead of "postgres://"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    print("[CONSOLE-DB] Converted 'postgres://' to 'postgresql://' for SQLAlchemy 2.0 compatibility")
+
+# ✅ CREATE ENGINE ONCE AT MODULE LOAD TIME
+# Reusing the same engine across all requests is more efficient
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,  # Keeps connections alive; good for cloud services
+    echo=False  # Set to True for SQL debugging if needed
+)
+
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-def get_engine():
-    # Fetch straight from the execution context shell
-    url = os.environ.get("DATABASE_URL")
-    
-    print(f"[CONSOLE-DB] Context check - DATABASE_URL exists: {bool(url)}")
-    
-    if not url:
-        print("[CONSOLE-DB] CRITICAL FALLBACK TRIGGERED: Forcing explicit database string injection.")
-        # COPY AND PASTE YOUR RAW DATABASE URL HERE DIRECTLY IF RAILWAY CONTINUES TO HIDE SYSTEM ARRAYS
-        url = "postgresql://placeholder_user:placeholder_pass@127.0.0.1:5432/placeholder_db"
-        
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-        
-    return create_engine(url, pool_pre_ping=True)
-
+# ✅ SIMPLE DEPENDENCY INJECTION - no complex logic
 def get_db():
-    print("[CONSOLE-DB] Yielding new database Session Local instance...")
-    engine = get_engine()
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    """Yield a database session for each request."""
     db = SessionLocal()
     try:
         yield db
-    except Exception as e:
-        print(f"[CONSOLE-DB] Exception hit within block: {str(e)}")
-        raise
     finally:
         db.close()
