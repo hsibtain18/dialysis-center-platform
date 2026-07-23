@@ -2,38 +2,62 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
-# ✅ GRAB DATABASE_URL ONCE AT MODULE LOAD TIME
-# Railway automatically injects this; don't check for it conditionally at runtime
+# Load .env file ONLY in local development
+# Railway doesn't need this - it injects variables directly
+is_railway = os.getenv("RAILWAY_ENVIRONMENT_NAME")
+if not is_railway:
+    # Find .env file - could be in backend/ or project root
+    env_path = None
+    for path in [".env", "../.env", "../../.env"]:
+        if os.path.exists(path):
+            env_path = path
+            break
+    
+    if env_path:
+        print(f"[CONSOLE-DB] Loading .env from: {os.path.abspath(env_path)}")
+        load_dotenv(env_path)
+    else:
+        print("[CONSOLE-DB] No .env file found - using system environment variables")
+else:
+    print("[CONSOLE-DB] Railway environment detected - using injected variables")
+
+# Get DATABASE_URL
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Validate it exists - fail fast if not configured
+print(f"[CONSOLE-DB] DATABASE_URL found: {bool(DATABASE_URL)}")
+if DATABASE_URL:
+    print(f"[CONSOLE-DB] Connection string (first 60 chars): {DATABASE_URL[:60]}...")
+
 if not DATABASE_URL:
+    if is_railway:
+        print("[CONSOLE-DB] ❌ ERROR: DATABASE_URL not found in Railway environment!")
+        print("[CONSOLE-DB] Fix: Ensure PostgreSQL plugin is connected in Railway dashboard")
+    else:
+        print("[CONSOLE-DB] ⚠️  DATABASE_URL not found in local environment")
+        print("[CONSOLE-DB] Create a .env file with: DATABASE_URL=postgresql://...")
+    
+    # Don't silently fall back - make it obvious
     raise ValueError(
-        "DATABASE_URL environment variable is not set. "
-        "Ensure it's configured in Railway dashboard under Variables."
+        "DATABASE_URL is required. "
+        f"{'Connect PostgreSQL plugin in Railway' if is_railway else 'Create .env file with DATABASE_URL'}"
     )
 
-print(f"[CONSOLE-DB] DATABASE_URL loaded successfully (first 50 chars): {DATABASE_URL[:50]}...")
-
-# Safe modification because SQLAlchemy 2.0 requires "postgresql://" instead of "postgres://"
+# Convert postgres:// to postgresql:// for SQLAlchemy 2.0
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    print("[CONSOLE-DB] Converted 'postgres://' to 'postgresql://' for SQLAlchemy 2.0 compatibility")
 
-# ✅ CREATE ENGINE ONCE AT MODULE LOAD TIME
-# Reusing the same engine across all requests is more efficient
+# Create engine
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,  # Keeps connections alive; good for cloud services
-    echo=False  # Set to True for SQL debugging if needed
+    pool_pre_ping=True,
+    echo=False
 )
 
-# Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# ✅ SIMPLE DEPENDENCY INJECTION - no complex logic
 def get_db():
     """Yield a database session for each request."""
     db = SessionLocal()
