@@ -3,9 +3,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
-
-# Load .env file ONLY in local development
-# Railway doesn't need this - it injects variables directly
+ 
 is_railway = os.getenv("RAILWAY_ENVIRONMENT_NAME")
 if not is_railway:
     # Find .env file - could be in backend/ or project root
