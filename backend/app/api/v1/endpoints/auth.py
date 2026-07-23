@@ -10,8 +10,6 @@ import bcrypt
 from app.api.v1.database.session import get_db
 from app.api.v1.models.user import User
 
-print("[CONSOLE-AUTH] Loading auth.py router module...")
-
 router = APIRouter()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "fallback-secret-key-for-local-dev")
@@ -52,7 +50,6 @@ def register_user(user_in: UserRegisterInput, db: Session = Depends(get_db)):
                 detail="Email is already registered."
             )
         
-        # Hash using modern native bcrypt
         password_bytes = user_in.password.encode('utf-8')
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
@@ -74,25 +71,25 @@ def register_user(user_in: UserRegisterInput, db: Session = Depends(get_db)):
             "total_users_in_db": len(all_current_users) + 1
         }
     except Exception as e:
-        print(f"[CONSOLE-AUTH] Exception caught during execution: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Trace: {str(e)}")
-
+    
+    
 @router.post("/login", response_model=TokenResponse)
 def login_user(user_in: UserLoginInput, db: Session = Depends(get_db)):
     print(f"[CONSOLE-AUTH] Incoming login attempt for email: {user_in.email}")
     try:
         user = db.query(User).filter(User.email == user_in.email).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password"
-            )
-            
-        # Verify using modern native bcrypt
-        supplied_password_bytes = user_in.password.encode('utf-8')
-        stored_hash_bytes = user.password.encode('utf-8')
         
-        if not bcrypt.checkpw(supplied_password_bytes, stored_hash_bytes):
+        if user:
+            stored_hash_bytes = user.password.encode('utf-8')
+        else:
+            stored_hash_bytes = bcrypt.hashpw(b"dummy", bcrypt.gensalt()).decode('utf-8').encode('utf-8')
+        
+        supplied_password_bytes = user_in.password.encode('utf-8')
+        password_valid = bcrypt.checkpw(supplied_password_bytes, stored_hash_bytes)
+        
+        # Generic error for both cases
+        if not user or not password_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
@@ -116,6 +113,7 @@ def login_user(user_in: UserLoginInput, db: Session = Depends(get_db)):
                 "last_name": user.last_name
             }
         }
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
     except Exception as e:
-        print(f"[CONSOLE-AUTH] Login Exception caught: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Trace: {str(e)}")
+        raise HTTPException(status_code=500, detail="Authentication service temporarily unavailable")
