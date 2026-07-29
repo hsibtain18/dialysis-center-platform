@@ -1,0 +1,14 @@
+@use "./styles/abstracts/variables";
+@use "./styles/abstracts/mixins";
+@use "./styles/abstracts/functions";
+
+@use "./styles/base/reset";
+@use "./styles/base/typography";
+
+@use "./styles/themes/light";
+@use "./styles/themes/dark";
+
+@use "./styles/utilities/helpers";
+@use "./styles/utilities/spacing";
+
+@import "tailwindcss";
