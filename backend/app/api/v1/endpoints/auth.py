@@ -110,7 +110,7 @@ def login_user(user_in: UserLoginInput, response: Response, db: Session = Depend
             value=access_token,
             httponly=True,
             secure=True,
-            samesite="strict",
+            samesite="none",
             max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             path="/"
         )
@@ -133,7 +133,7 @@ def login_user(user_in: UserLoginInput, response: Response, db: Session = Depend
 
 @router.post("/logout")
 def logout_user(response: Response):
-    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="access_token", path="/", samesite="none", secure=True)
     return {"message": "Logged out"}
 
 
