@@ -1,9 +1,9 @@
 # backend/app/api/v1/endpoints/auth.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+from jose import jwt, JWTError
 import os
 import bcrypt
 
@@ -36,6 +36,7 @@ def create_access_token(data: dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+
 
 @router.post("/register")
 def register_user(user_in: UserRegisterInput, db: Session = Depends(get_db)):
@@ -75,7 +76,7 @@ def register_user(user_in: UserRegisterInput, db: Session = Depends(get_db)):
     
     
 @router.post("/login", response_model=TokenResponse)
-def login_user(user_in: UserLoginInput, db: Session = Depends(get_db)):
+def login_user(user_in: UserLoginInput, response: Response, db: Session = Depends(get_db)):
     print(f"[CONSOLE-AUTH] Incoming login attempt for email: {user_in.email}")
     try:
         user = db.query(User).filter(User.email == user_in.email).first()
@@ -102,6 +103,17 @@ def login_user(user_in: UserLoginInput, db: Session = Depends(get_db)):
             )
             
         access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+
+        # Set httpOnly cookie — frontend JS can never read this
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            path="/"
+        )
         
         return {
             "access_token": access_token,
@@ -117,3 +129,30 @@ def login_user(user_in: UserLoginInput, db: Session = Depends(get_db)):
         raise  # Re-raise HTTP exceptions
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service temporarily unavailable")
+
+
+@router.post("/logout")
+def logout_user(response: Response):
+    response.delete_cookie(key="access_token", path="/")
+    return {"message": "Logged out"}
+
+
+@router.get("/me")
+def get_current_user(access_token: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(access_token, JWT_SECRET, algorithms=[ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }
