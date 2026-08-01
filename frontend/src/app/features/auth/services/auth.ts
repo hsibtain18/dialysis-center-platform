@@ -8,7 +8,7 @@ import { LoginRequest, LoginResponse } from '../models/auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {
-  private readonly baseUrl = `${environment.apiUrl}/auth`;
+  private readonly baseUrl = `${environment.apiUrl}auth`;
 
   constructor(private http: HttpClient) {}
 

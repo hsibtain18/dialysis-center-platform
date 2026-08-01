@@ -12,7 +12,7 @@ app = FastAPI(
 # Set up CORS for your local and production frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://dialysis-center-platform-production.up.railway.app/"],
+    allow_origins=["http://localhost:3000", "https://dialysis-center-platform-production.up.railway.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
