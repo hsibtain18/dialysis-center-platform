@@ -1,3 +1,5 @@
+<!-- app/features/auth/pages/login/login.component.html -->
+
 <div class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
   <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
     <div class="mb-8 text-center">
@@ -7,39 +9,43 @@
       </p>
     </div>
 
-    <form class="space-y-5">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-5">
       <div class="flex flex-col gap-2">
         <label class="text-sm font-medium text-slate-700">Email</label>
         <input
           type="email"
+          formControlName="email"
           placeholder="john@example.com"
           class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
         />
+        @if (form.get('email')?.invalid && form.get('email')?.touched) {
+          <span class="text-xs text-red-600">Enter a valid email</span>
+        }
       </div>
 
       <div class="flex flex-col gap-2">
         <label class="text-sm font-medium text-slate-700">Password</label>
         <input
           type="password"
+          formControlName="password"
           placeholder="••••••••"
           class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
         />
+        @if (form.get('password')?.invalid && form.get('password')?.touched) {
+          <span class="text-xs text-red-600">Password must be at least 6 characters</span>
+        }
       </div>
 
-      <div class="flex items-center justify-between text-sm">
-        <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
-          <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-          <span>Remember me</span>
-        </label>
-
-        <a href="#" class="text-blue-600 hover:text-blue-700 transition">Forgot Password?</a>
-      </div>
+      @if (errorMessage()) {
+        <p class="text-sm text-red-600 text-center">{{ errorMessage() }}</p>
+      }
 
       <button
         type="submit"
-        class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 active:scale-[0.99]"
+        [disabled]="loading()"
+        class="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 active:scale-[0.99] disabled:opacity-50"
       >
-        Login
+        {{ loading() ? 'Signing in...' : 'Login' }}
       </button>
     </form>
   </div>
