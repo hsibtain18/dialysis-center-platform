@@ -4,22 +4,14 @@ import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class TokenService {
-  private accessToken: string | null = null;
+ 
+  private loggedIn = false;
 
-  setToken(token: string): void {
-    this.accessToken = token;
-  }
-
-  getToken(): string | null {
-    return this.accessToken;
-  }
-
-  clear(): void {
-    this.accessToken = null;
-    // refresh token cookie is httpOnly — cleared server-side via /auth/logout
+  setLoggedIn(state: boolean): void {
+    this.loggedIn = state;
   }
 
   isLoggedIn(): boolean {
-    return !!this.accessToken;
+    return this.loggedIn;
   }
 }

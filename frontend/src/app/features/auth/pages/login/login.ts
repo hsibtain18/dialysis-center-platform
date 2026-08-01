@@ -2,7 +2,9 @@
 
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthApiService } from '@features/auth/services/auth';
+import { Router } from '@angular/router';
+import { LoginResponse } from '@features/auth/models/auth.models';
+import { AuthService } from '@features/auth/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -12,14 +14,14 @@ import { AuthApiService } from '@features/auth/services/auth';
 })
 export class Login {
   private fb = inject(FormBuilder);
-  private authService = inject(AuthApiService);
+  private authService = inject(AuthService);
 
   loading = signal(false);
   errorMessage = signal<string | null>(null);
 
   form = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
+    email: ['has@dialysiscenter.com', [Validators.required, Validators.email]],
+    password: ['521541', [Validators.required, Validators.minLength(6)]]
   });
 
   onSubmit(): void {
@@ -34,7 +36,7 @@ export class Login {
     const { email, password } = this.form.getRawValue();
 
     this.authService.login({ email: email!, password: password! }).subscribe({
-      next: () => {
+      next: (data: LoginResponse) => {
         this.loading.set(false);
       },
       error: (err) => {

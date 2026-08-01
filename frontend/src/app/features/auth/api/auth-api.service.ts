@@ -14,19 +14,19 @@ export class AuthApiService {
 
   login(payload: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.baseUrl}/login`, payload, {
-      withCredentials: true // allows the browser to accept the Set-Cookie refresh token
+      withCredentials: true
     });
   }
 
-  refreshToken(): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.baseUrl}/refresh`, {}, {
-      withCredentials: true // sends the httpOnly cookie automatically
+  logout(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.baseUrl}/logout`, {}, {
+      withCredentials: true
     });
   }
 
-  logout(): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/logout`, {}, {
-      withCredentials: true // lets backend clear the cookie
+  me(): Observable<LoginResponse['user']> {
+    return this.http.get<LoginResponse['user']>(`${this.baseUrl}/me`, {
+      withCredentials: true
     });
   }
 }
