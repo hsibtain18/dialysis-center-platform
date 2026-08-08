@@ -13,12 +13,19 @@ export const routes: Routes = [
       import('@features/auth/auth.routes').then(m => m.AUTH_ROUTES)
   },
   {
-    path: 'dashboard',
+    path: '',
     canActivate: [authGuard],
-    loadChildren: () =>
-      import('@features/dashboard/dashboard.routes').then(
-        m => m.DASHBOARD_ROUTES
-      )
+    loadComponent: () =>
+      import('@layouts/dashboard/dashboard').then(m => m.DashboardLayout),
+    children: [
+      {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('@features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES)
+      },
+      // patients, schedule, treatments, reports go here later,
+      // each still under the guarded DashboardLayout
+    ]
   },
   {
     path: '**',
